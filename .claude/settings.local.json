@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E '^\\(vite|tsc\\)$')",
+      "Bash(node_modules/.bin/tsc -p tsconfig.app.json --noEmit)",
+      "Bash(node_modules/.bin/vite --version)"
+    ]
+  }
+}
