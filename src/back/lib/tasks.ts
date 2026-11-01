@@ -3,7 +3,7 @@ import { daysInMonth, utcDate } from './calendar'
 export type Importance = 0 | 1 | 2
 
 // start and end are the UTC midnights of the first and last day; end is inclusive.
-export type Task = { id: string; title: string; start: number; end: number; importance: Importance; urgency: number; notes: string }
+export type Task = { id: string; title: string; start: number; end: number; importance: Importance; urgency: number; notes: string; projectId: string | null }
 export type NewTask = Omit<Task, 'id'>
 
 export const IMPORTANCE = [

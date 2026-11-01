@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { Project, ProjectColor } from '../../back/lib/projects'
 import { fromDayInput, Importance, IMPORTANCE, NewTask, Task, taskColor, toDayInput, urgencyLabel } from '../../back/lib/tasks'
+import { ProjectColorPicker } from './ProjectColorPicker'
 
 // With `task` the dialog edits it and offers Delete; without, it creates a new task.
-type Props = { task?: Task; defaultDay: number; onClose: () => void; onSave: (task: NewTask) => void; onDelete?: () => void }
+type Props = { task?: Task; defaultDay: number; projects: Project[]; onCreateProject: (name: string, color?: ProjectColor) => string | null; onClose: () => void; onSave: (task: NewTask) => void; onDelete?: () => void }
 
-export function TaskDialog({ task, defaultDay, onClose, onSave, onDelete }: Props) {
+export function TaskDialog({ task, defaultDay, projects, onCreateProject, onClose, onSave, onDelete }: Props) {
   const [title, setTitle] = useState(task?.title ?? '')
+  const [projectId, setProjectId] = useState(task?.projectId ?? '')
+  const [creatingProject, setCreatingProject] = useState(false)
+  const [projectName, setProjectName] = useState('')
+  const [projectColor, setProjectColor] = useState<ProjectColor>('blue')
   const [start, setStart] = useState(() => toDayInput(task?.start ?? defaultDay))
   const [end, setEnd] = useState(() => toDayInput(task?.end ?? defaultDay))
   const [importance, setImportance] = useState<Importance>(task?.importance ?? 0)
@@ -27,7 +33,13 @@ export function TaskDialog({ task, defaultDay, onClose, onSave, onDelete }: Prop
     if (!title.trim()) { setError('Give the task a title.'); return }
     if (s === null || e === null) { setError('Enter valid start and end dates.'); return }
     if (e < s) { setError('The end date must be on or after the start date.'); return }
-    onSave({ title: title.trim(), start: s, end: e, importance, urgency, notes: notes.trim() })
+    onSave({ title: title.trim(), start: s, end: e, importance, urgency, notes: notes.trim(), projectId: projectId || null })
+  }
+
+  const createProject = () => {
+    const id = onCreateProject(projectName, projectColor)
+    if (!id) { setError(projectName.trim() ? 'That project name is already in use.' : 'Enter a project name.'); return }
+    setProjectId(id); setProjectName(''); setCreatingProject(false); setError('')
   }
 
   const { hue, saturation, lightness } = IMPORTANCE[importance]
@@ -47,6 +59,24 @@ export function TaskDialog({ task, defaultDay, onClose, onSave, onDelete }: Prop
           <span>Title</span>
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What are you planning?" />
         </label>
+        <label className="field project-field">
+          <span>Project</span>
+          <select value={creatingProject ? '__create__' : projectId} onChange={(e) => {
+            if (e.target.value === '__create__') setCreatingProject(true)
+            else { setProjectId(e.target.value); setCreatingProject(false) }
+          }}>
+            <option value="">No Project</option>
+            {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+            <option value="__create__">Create Project…</option>
+          </select>
+        </label>
+        {creatingProject && <div className="inline-project-create">
+          <input autoFocus aria-label="New project name" value={projectName} onChange={(e) => setProjectName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createProject() } if (e.key === 'Escape') setCreatingProject(false) }} placeholder="Project name" />
+          <ProjectColorPicker value={projectColor} onChange={setProjectColor} />
+          <button type="button" onClick={createProject}>Create</button>
+          <button type="button" onClick={() => setCreatingProject(false)}>Cancel</button>
+        </div>}
         <div className="field-row">
           <label className="field">
             <span>Start date</span>

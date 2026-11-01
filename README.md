@@ -31,9 +31,19 @@ Rapid Folio Flip retains only the outgoing complete level above the incoming com
 
 ## Tasks and persistence
 
-Create tasks with **New Task** and provide a title, exact start/end dates, importance, urgency, and notes. Task bars use the same `timeToX` projection as the timeline. They can be edited, deleted, moved, resized, reordered, and filtered without changing their underlying UTC dates.
+Create tasks with **New Task** and provide a title, optional project, exact start/end dates, importance, urgency, and notes. Task bars use the same `timeToX` projection as the timeline. They can be edited, deleted, moved, resized, reordered, and filtered without changing their underlying UTC dates.
 
-Tasks are stored directly in this browser under the existing `chronos-tasks` localStorage key. They remain after refresh. CHRONOS does not require an account, backend, database, or network connection, and removing the former account layer does not erase existing browser tasks.
+## Projects
+
+- Choose a project directly below **Title** in the New/Edit Task dialog, or create one in place.
+- Use the compact **All Projects** control above the task bars to filter by one or several projects.
+- The filter shows task counts and supports Clear, Show All, Show More, rename, and explicit two-step deletion.
+- Choose from eight restrained project colors when creating a project, and change its name or color later with **Edit**. Task and filter markers update immediately.
+- The filter uses a brief fade, lift, and scale transition; Show More/Show Less resizes smoothly, while reduced-motion mode removes spatial movement.
+- Deleting a project never deletes its tasks; those tasks return to **No Project**.
+- Existing tasks are migrated safely to **No Project**.
+
+Tasks are stored directly in this browser under the existing `chronos-tasks` localStorage key. Projects use the versioned `chronos-projects-v1` key. Both remain after refresh. CHRONOS does not require an account, backend, database, or network connection, and existing task storage remains compatible.
 
 ## Architecture
 
@@ -41,10 +51,10 @@ Tasks are stored directly in this browser under the existing `chronos-tasks` loc
 src/
 ├── back/
 │   ├── engine/        pure coordinate and zoom calculations
-│   └── lib/           UTC Gregorian/ISO calendar and task model
+│   └── lib/           UTC Gregorian/ISO calendar, task, and project models
 └── front/
     ├── components/    organized timeline, controls, and tasks
-    ├── hooks/         timeline, gestures, and local task state
+    ├── hooks/         timeline, gestures, and local task/project state
     └── styles/        shared light/dark responsive visual system
 ```
 

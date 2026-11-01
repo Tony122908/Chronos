@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NewTask, Task } from '../../back/lib/tasks'
+import { normalizeTasks, removeProjectFromTasks } from '../../back/lib/projects'
 
 const STORAGE_KEY = 'chronos-tasks'
 
@@ -7,8 +8,7 @@ export type ReorderAnchor = { before: string } | { after: string }
 
 function load(): Task[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-    return Array.isArray(parsed) ? parsed : []
+    return normalizeTasks(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'))
   } catch {
     return []
   }
@@ -28,6 +28,8 @@ export function useTasks() {
   const remove = useCallback((id: string) => setTasks((current) => current.filter((item) => item.id !== id)), [])
   const reschedule = useCallback((id: string, start: number, end: number) =>
     setTasks((current) => current.map((item) => item.id === id ? { ...item, start, end } : item)), [])
+  const clearProject = useCallback((projectId: string) =>
+    setTasks((current) => removeProjectFromTasks(current, projectId)), [])
 
   const reorder = useCallback((id: string, anchor: ReorderAnchor) => setTasks((current) => {
     const task = current.find((item) => item.id === id)
@@ -38,6 +40,6 @@ export function useTasks() {
     return rest
   }), [])
 
-  return { tasks, add, update, remove, reschedule, reorder }
+  return { tasks, add, update, remove, reschedule, reorder, clearProject }
 }
 

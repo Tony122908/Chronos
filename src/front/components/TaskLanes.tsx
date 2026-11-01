@@ -2,11 +2,13 @@ import { useRef, useState } from 'react'
 import { timeToX, ViewState } from '../../back/engine/coordinates'
 import { DAY_MS, localNowMs, MAX_DATE_MS, MIN_DATE_MS } from '../../back/lib/calendar'
 import { formatDayRange } from '../../back/lib/formatting'
+import { Project } from '../../back/lib/projects'
 import { IMPORTANCE, Task, taskColor } from '../../back/lib/tasks'
 import { ReorderAnchor } from '../hooks/useTasks'
 
 type Props = {
   tasks: Task[] // visible tasks, top to bottom
+  projects: Project[]
   view: ViewState
   width: number
   onSelect: (task: Task) => void
@@ -16,7 +18,7 @@ type Props = {
 
 const ROW_HEIGHT = 30
 const STRIDE = ROW_HEIGHT + 8
-const PADDING = 28
+const PADDING = 18
 const MIN_BAR = 8
 const LABEL_GAP = 6
 const DRAG_THRESHOLD = 4
@@ -39,7 +41,7 @@ function shifted(task: Task, mode: DragMode, days: number): [number, number] {
   return [task.start + d, task.end + d]
 }
 
-export function TaskLanes({ tasks, view, width, onSelect, onReschedule, onReorder }: Props) {
+export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule, onReorder }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const pending = useRef<Drag | null>(null)
   const suppressClickUntil = useRef(0)
@@ -98,6 +100,7 @@ export function TaskLanes({ tasks, view, width, onSelect, onReschedule, onReorde
 
   const now = timeToX(localNowMs(), view, width)
   const dragClass = drag ? ` dragging ${drag.mode === 'move' ? 'drag-move' : 'drag-edge'}` : ''
+  const projectById = new Map(projects.map((project) => [project.id, project]))
 
   return <div className={`task-lanes${dragClass}`} style={{ height: PADDING * 2 + tasks.length * STRIDE }}>
     {now >= 0 && now <= width && <div className="task-today" style={{ left: now }} />}
@@ -113,18 +116,21 @@ export function TaskLanes({ tasks, view, width, onSelect, onReschedule, onReorde
         : PADDING + slot(i) * STRIDE
       const handle = Math.min(8, (x2 - x1) / 3)
       const style = { top, '--task': taskColor(task.importance, task.urgency) } as React.CSSProperties
-      const summary = `${task.title} · ${formatDayRange(task.start, task.end)} · ${IMPORTANCE[task.importance].name} importance${task.notes ? `\n${task.notes}` : ''}`
+      const project = task.projectId ? projectById.get(task.projectId) : undefined
+      const summary = `${task.title} · ${project?.name ?? 'No Project'} · ${formatDayRange(task.start, task.end)} · ${IMPORTANCE[task.importance].name} importance${task.notes ? `\n${task.notes}` : ''}`
       return <div key={task.id} className={`task-row${active ? ' active' : ''}`} style={style} title={drag ? undefined : summary}>
         <button className="task-bar" style={{ left: x1, width: x2 - x1 }} aria-label={`Edit ${task.title}`}
           onPointerDown={(e) => onPointerDown(e, task)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
           onClick={() => select(task)}>
           {!outside && <span className="task-label" style={{ left: Math.max(0, -x1), right: Math.max(0, x2 - width) }}>
-            <i className="task-dot" />{task.title}
+            <i className={`task-dot${project ? ` project-marker project-${project.color}` : ''}`} />{task.title}
           </span>}
           <span className="task-handle start" data-edge="start" style={{ width: handle }} />
           <span className="task-handle end" data-edge="end" style={{ width: handle }} />
         </button>
-        {outside && <button className="task-label outside" style={{ left: x2 + LABEL_GAP }} onClick={() => select(task)} tabIndex={-1}>{task.title}</button>}
+        {outside && <button className="task-label outside" style={{ left: x2 + LABEL_GAP }} onClick={() => select(task)} tabIndex={-1}>
+          <i className={`task-dot${project ? ` project-marker project-${project.color}` : ''}`} />{task.title}
+        </button>}
         {active?.axis === 'x' && <span className="task-drag-date" style={{ left: clamp(x1, 4, Math.max(4, width - 200)) }}>{formatDayRange(start, end)}</span>}
       </div>
     })}
