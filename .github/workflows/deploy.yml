@@ -1,4 +1,5 @@
-name: Deploy to GitHub Pages
+
+name: Deploy Chronos to GitHub Pages
 
 on:
   push:
@@ -20,25 +21,36 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: lts/*
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: npm run build
+      - name: Build application
+        run: pnpm run build
 
-      - uses: actions/configure-pages@v6
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
-      - uses: actions/upload-pages-artifact@v5
+      - name: Upload compiled website
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
