@@ -1,4 +1,5 @@
 import { RefObject, useEffect, useRef, useState } from 'react'
+import { resolveWheelRoute } from './gestureRouting'
 
 type Options = {
   onPan: (dx: number) => void
@@ -6,8 +7,11 @@ type Options = {
   onStep: (direction: 1 | -1, x: number) => void
   // Pointer-downs on matching targets are left to the element's own children (e.g. draggable bars).
   ignore?: (target: HTMLElement) => boolean
+  // Wheel input on overlays such as an open project popover remains local to that surface.
+  wheelBlock?: (target: HTMLElement) => boolean
   // When the element overflows vertically, plain vertical wheel scrolls it instead of panning.
   verticalScroll?: boolean
+  verticalScrollRef?: RefObject<HTMLElement | null>
 }
 
 // Wheel and drag slide through time; pinch / modifier-wheel steps one level per gesture.
@@ -25,8 +29,19 @@ export function usePanGestures(ref: RefObject<HTMLElement | null>, options: Opti
     let suppressClickUntil = 0
 
     const onWheel = (e: WheelEvent) => {
-      const { onPan, onStep, verticalScroll } = latest.current
-      if (e.ctrlKey || e.metaKey) {
+      const { onPan, onStep, verticalScroll, verticalScrollRef, wheelBlock } = latest.current
+      const vertical = Math.abs(e.deltaY) > Math.abs(e.deltaX)
+      const scrollNode = verticalScrollRef?.current ?? node
+      const route = resolveWheelRoute({
+        modifier: e.ctrlKey || e.metaKey,
+        blockedSurface: wheelBlock?.(e.target as HTMLElement) ?? false,
+        verticalDominant: vertical,
+        verticalScrollEnabled: Boolean(verticalScroll),
+        insideScrollArea: scrollNode.contains(e.target as Node),
+        scrollAreaOverflowing: scrollNode.scrollHeight > scrollNode.clientHeight,
+      })
+      if (route === 'local' || route === 'vertical-scroll') return
+      if (route === 'zoom') {
         e.preventDefault()
         clearTimeout(idle)
         idle = window.setTimeout(() => { pinch = 0; locked = false }, 200)
@@ -37,8 +52,6 @@ export function usePanGestures(ref: RefObject<HTMLElement | null>, options: Opti
         locked = true
         return
       }
-      const vertical = Math.abs(e.deltaY) > Math.abs(e.deltaX)
-      if (vertical && verticalScroll && node.scrollHeight > node.clientHeight) return
       e.preventDefault()
       onPan(-(vertical ? e.deltaY : e.deltaX) * (e.deltaMode === 1 ? 16 : 1))
     }

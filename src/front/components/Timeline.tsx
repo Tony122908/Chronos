@@ -13,7 +13,7 @@ type Props = {
   level: Level
   epoch: number
   onPan: (dx: number) => void
-  onLevel: (level: number, anchorMs: number, anchorX: number) => void
+  onLevel: (level: number, anchorMs: number, anchorX: number, preferToday?: boolean) => { anchorMs: number; anchorX: number } | undefined
   onToday: () => void
 }
 
@@ -36,15 +36,16 @@ export function Timeline({ view, level, epoch, onPan, onLevel, onToday }: Props)
   const [transition, setTransition] = useState<Transition | null>(null)
   const [forceReducedMotion] = useState(() => new URLSearchParams(window.location.search).get('reducedMotion') === '1')
 
-  const requestLevel = (next: number, anchorMs: number, anchorX: number) => {
-    motionOrigin.current = width > 0 ? anchorX / width : .5
+  const requestLevel = (next: number, anchorMs: number, anchorX: number, preferToday = false) => {
+    const resolved = onLevel(next, anchorMs, anchorX, preferToday)
+    if (!resolved) return
+    motionOrigin.current = width > 0 ? resolved.anchorX / width : .5
     anchorPending.current = true
-    onLevel(next, anchorMs, anchorX)
   }
 
   const dragging = usePanGestures(wrap, {
     onPan,
-    onStep: (direction, anchorX) => requestLevel(level + direction, xToTime(anchorX, view, width), anchorX),
+    onStep: (direction, anchorX) => requestLevel(level + direction, xToTime(anchorX, view, width), anchorX, true),
     // Parent-period labels are controls first. A small pointer wobble must never turn their click into a pan.
     ignore: (target) => target.closest('[data-row="parent"], .contextual-time-label') !== null,
   })
@@ -111,10 +112,12 @@ export function Timeline({ view, level, epoch, onPan, onLevel, onToday }: Props)
   const onClick = (event: React.MouseEvent) => {
     const unit = (event.target as HTMLElement).closest<HTMLElement>('[data-timeline-unit]')
     if (!unit || unit.dataset.row !== 'main') return
-    const navigation = resolveTimelineUnitNavigation({ row: 'main', start: Number(unit.dataset.start) }, level, view.centerMs)
-    if (!navigation) return
     const rect = wrap.current?.getBoundingClientRect()
     const anchorX = rect ? event.clientX - rect.left : width / 2
+    const anchorMs = xToTime(anchorX, view, width)
+    const navigation = resolveTimelineUnitNavigation({ row: 'main', start: Number(unit.dataset.start),
+      end: Number(unit.dataset.end), anchorMs }, level, view.centerMs)
+    if (!navigation) return
     requestLevel(navigation.level, navigation.anchorMs, anchorX)
   }
 

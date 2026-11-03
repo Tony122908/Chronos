@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { NewTask, Task } from '../../back/lib/tasks'
+import { completeTask, NewTask, restoreTask, Task } from '../../back/lib/tasks'
 import { normalizeTasks, removeProjectFromTasks } from '../../back/lib/projects'
 
 const STORAGE_KEY = 'chronos-tasks'
@@ -30,6 +30,10 @@ export function useTasks() {
     setTasks((current) => current.map((item) => item.id === id ? { ...item, start, end } : item)), [])
   const clearProject = useCallback((projectId: string) =>
     setTasks((current) => removeProjectFromTasks(current, projectId)), [])
+  const complete = useCallback((id: string, completedAt = Date.now()) =>
+    setTasks((current) => current.map((item) => item.id === id ? completeTask(item, completedAt) : item)), [])
+  const restore = useCallback((id: string) =>
+    setTasks((current) => current.map((item) => item.id === id ? restoreTask(item) : item)), [])
 
   const reorder = useCallback((id: string, anchor: ReorderAnchor) => setTasks((current) => {
     const task = current.find((item) => item.id === id)
@@ -40,6 +44,6 @@ export function useTasks() {
     return rest
   }), [])
 
-  return { tasks, add, update, remove, reschedule, reorder, clearProject }
+  return { tasks, add, update, remove, reschedule, reorder, clearProject, complete, restore }
 }
 

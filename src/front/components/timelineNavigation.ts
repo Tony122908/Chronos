@@ -4,6 +4,7 @@ export type TimelineUnitNavigation = {
   row: 'main' | 'parent'
   start: number
   end?: number
+  anchorMs?: number
   targetLevel?: Level
 }
 
@@ -20,7 +21,11 @@ export function resolveTimelineUnitNavigation(
 ): ResolvedTimelineNavigation {
   if (unit.row === 'main') {
     if (currentLevel >= 3) return null
-    return { level: (currentLevel + 1) as Level, anchorMs: unit.start }
+    const candidate = unit.anchorMs ?? focusMs
+    const anchorMs = unit.end === undefined
+      ? unit.start
+      : Math.min(unit.end - 1, Math.max(unit.start, candidate))
+    return { level: (currentLevel + 1) as Level, anchorMs }
   }
   if (unit.targetLevel === undefined || unit.end === undefined || unit.targetLevel >= currentLevel) return null
   return { level: unit.targetLevel, anchorMs: resolveParentAnchor(focusMs, unit.start, unit.end) }

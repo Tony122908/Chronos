@@ -9,7 +9,7 @@ pnpm install
 pnpm run dev
 ```
 
-Open <http://127.0.0.1:5173>. The port is fixed so browser-stored tasks remain available at the same origin.
+Open <http://127.0.0.1:5173/Chronos/>. The port is fixed so browser-stored tasks remain available at the same origin.
 
 ```bash
 pnpm test
@@ -18,7 +18,7 @@ pnpm run build
 
 ## Navigation
 
-- Click a year, month, or week to enter the next complete level.
+- Click a year, month, or week to enter the next complete level at the exact date beneath the pointer. For all other Zoom In methods, a visible Today marker takes priority, so Years opens the current month, Months opens the current ISO week, and Weeks opens the current day. If Today is outside the viewport, CHRONOS preserves the existing pointer or viewport focus.
 - Click any parent band or the breadcrumb beneath **CHRONOS** to jump directly back to that complete level.
 - Breadcrumb and contextual date controls activate only by click, tap, `Enter`, or `Space`; pointing never changes the timeline.
 - Drag, swipe, or scroll to move through time.
@@ -33,6 +33,8 @@ Rapid Folio Flip retains only the outgoing complete level above the incoming com
 
 Create tasks with **New Task** and provide a title, optional project, exact start/end dates, importance, urgency, and notes. Task bars use the same `timeToX` projection as the timeline. They can be edited, deleted, moved, resized, reordered, and filtered without changing their underlying UTC dates.
 
+Rest a mouse pointer on a task for about 2.2 seconds to reveal its compact **Done** checkmark; keyboard focus and touch reveal it immediately. Wide tasks reserve a trailing action area, while short tasks place the action outside the bar and automatically choose the side that stays on-screen. Completing a task uses a restrained inward-collapse animation and removes it from active lanes without deleting it; the original task and an optional `completedAt` timestamp remain in `chronos-tasks` for a future history view. Reduced-motion mode replaces the collapse with a minimal fade.
+
 ## Projects
 
 - Choose a project directly below **Title** in the New/Edit Task dialog, or create one in place.
@@ -40,6 +42,7 @@ Create tasks with **New Task** and provide a title, optional project, exact star
 - The filter shows task counts and supports Clear, Show All, Show More, rename, and explicit two-step deletion.
 - Choose from eight restrained project colors when creating a project, and change its name or color later with **Edit**. Task and filter markers update immediately.
 - The filter uses a brief fade, lift, and scale transition; Show More/Show Less resizes smoothly, while reduced-motion mode removes spatial movement.
+- Wheel and trackpad gestures over the collapsed project-filter row continue to pan or zoom the timeline. Scrolling inside an open project list remains local to that list.
 - Deleting a project never deletes its tasks; those tasks return to **No Project**.
 - Existing tasks are migrated safely to **No Project**.
 

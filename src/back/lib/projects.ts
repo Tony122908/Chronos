@@ -32,7 +32,9 @@ export function normalizeTasks(value: unknown): Task[] {
     if (!entry || typeof entry !== 'object') return []
     const task = entry as Partial<Task>
     if (typeof task.id !== 'string' || typeof task.title !== 'string' || !Number.isFinite(task.start) || !Number.isFinite(task.end)) return []
-    return [{ ...task, projectId: typeof task.projectId === 'string' ? task.projectId : null } as Task]
+    const normalized = { ...task, projectId: typeof task.projectId === 'string' ? task.projectId : null } as Task
+    if (!Number.isFinite(task.completedAt)) delete normalized.completedAt
+    return [normalized]
   })
 }
 

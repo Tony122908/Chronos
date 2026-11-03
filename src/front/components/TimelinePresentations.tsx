@@ -66,7 +66,7 @@ export function OrganizedTimeline(props: TimelinePresentationProps) {
         })}
         <div className={`organized-primary-row${props.level === 3 ? ' leaf' : ''}`}>
           {spans(props.level, props.start, props.end).map((span) => <UnitTag key={span.start}
-            {...(!props.decorative ? { type: 'button', 'data-timeline-unit': true, 'data-row': 'main', 'data-start': span.start } : {})}
+            {...(!props.decorative ? { type: 'button', 'data-timeline-unit': true, 'data-row': 'main', 'data-start': span.start, 'data-end': span.end } : {})}
             className={`organized-primary-unit${span.weekend ? ' weekend' : ''}${isCurrent(span, props.now) ? ' current' : ''}`}
             style={segmentStyle(span, props.x)}>{unitLabel(span)}</UnitTag>)}
         </div>

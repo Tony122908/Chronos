@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { timeToX, ViewState } from '../../back/engine/coordinates'
 import { DAY_MS, localNowMs, MAX_DATE_MS, MIN_DATE_MS } from '../../back/lib/calendar'
 import { formatDayRange } from '../../back/lib/formatting'
 import { Project } from '../../back/lib/projects'
-import { IMPORTANCE, Task, taskColor } from '../../back/lib/tasks'
+import { completionDelay, IMPORTANCE, Task, taskColor } from '../../back/lib/tasks'
 import { ReorderAnchor } from '../hooks/useTasks'
+import { cancelDoneReveal, placeDoneAction, scheduleDoneReveal } from './taskActions'
 
 type Props = {
   tasks: Task[] // visible tasks, top to bottom
@@ -14,6 +15,7 @@ type Props = {
   onSelect: (task: Task) => void
   onReschedule: (id: string, start: number, end: number) => void
   onReorder: (id: string, anchor: ReorderAnchor) => void
+  onComplete: (id: string, completedAt?: number) => void
 }
 
 const ROW_HEIGHT = 30
@@ -41,10 +43,37 @@ function shifted(task: Task, mode: DragMode, days: number): [number, number] {
   return [task.start + d, task.end + d]
 }
 
-export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule, onReorder }: Props) {
+export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule, onReorder, onComplete }: Props) {
   const [drag, setDrag] = useState<Drag | null>(null)
+  const [completing, setCompleting] = useState<Set<string>>(() => new Set())
+  const [revealed, setRevealed] = useState<Set<string>>(() => new Set())
   const pending = useRef<Drag | null>(null)
   const suppressClickUntil = useRef(0)
+  const completingRef = useRef(new Set<string>())
+  const completionTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const hoverTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  useEffect(() => () => {
+    completionTimers.current.forEach((timer) => clearTimeout(timer))
+    hoverTimers.current.forEach(cancelDoneReveal)
+  }, [])
+
+  const revealDone = (id: string) => setRevealed((current) => current.has(id) ? current : new Set(current).add(id))
+  const hideDone = (id: string) => {
+    const timer = hoverTimers.current.get(id)
+    if (timer) { cancelDoneReveal(timer); hoverTimers.current.delete(id) }
+    setRevealed((current) => {
+      if (!current.has(id)) return current
+      const next = new Set(current); next.delete(id); return next
+    })
+  }
+  const startHover = (event: React.PointerEvent, id: string) => {
+    if (event.pointerType !== 'mouse' || drag || hoverTimers.current.has(id) || revealed.has(id)) return
+    hoverTimers.current.set(id, scheduleDoneReveal(() => {
+      hoverTimers.current.delete(id)
+      revealDone(id)
+    }))
+  }
 
   const origin = drag ? tasks.findIndex((t) => t.id === drag.id) : -1
   const reordering = drag?.axis === 'y' && origin !== -1
@@ -72,6 +101,7 @@ export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule
       if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return
       d.active = true
       d.axis ??= Math.abs(dy) > Math.abs(dx) ? 'y' : 'x'
+      hideDone(d.id)
     }
     d.days = d.axis === 'x' ? Math.round(dx / view.pxPerDay) : 0
     d.dy = d.axis === 'y' ? dy : 0
@@ -97,6 +127,18 @@ export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule
   }
   const onPointerCancel = () => { pending.current = null; setDrag(null) }
   const select = (task: Task) => { if (performance.now() >= suppressClickUntil.current) onSelect(task) }
+  const finish = (event: React.MouseEvent, task: Task) => {
+    event.stopPropagation()
+    if (completingRef.current.has(task.id)) return
+    completingRef.current.add(task.id)
+    setCompleting((current) => new Set(current).add(task.id))
+    const completedAt = Date.now()
+    const delay = completionDelay(matchMedia('(prefers-reduced-motion: reduce)').matches)
+    completionTimers.current.set(task.id, setTimeout(() => {
+      completionTimers.current.delete(task.id)
+      onComplete(task.id, completedAt)
+    }, delay))
+  }
 
   const now = timeToX(localNowMs(), view, width)
   const dragClass = drag ? ` dragging ${drag.mode === 'move' ? 'drag-move' : 'drag-edge'}` : ''
@@ -118,19 +160,29 @@ export function TaskLanes({ tasks, projects, view, width, onSelect, onReschedule
       const style = { top, '--task': taskColor(task.importance, task.urgency) } as React.CSSProperties
       const project = task.projectId ? projectById.get(task.projectId) : undefined
       const summary = `${task.title} · ${project?.name ?? 'No Project'} · ${formatDayRange(task.start, task.end)} · ${IMPORTANCE[task.importance].name} importance${task.notes ? `\n${task.notes}` : ''}`
-      return <div key={task.id} className={`task-row${active ? ' active' : ''}`} style={style} title={drag ? undefined : summary}>
+      const isCompleting = completing.has(task.id)
+      const done = placeDoneAction({ x1, x2, viewportWidth: width, estimatedLabelWidth: labelWidth(task.title), labelOutside: outside, outsideLabelGap: LABEL_GAP })
+      const clippedRight = Math.max(0, x2 - width)
+      const doneVisible = revealed.has(task.id)
+      return <div key={task.id} className={`task-row${active ? ' active' : ''}${isCompleting ? ' completing' : ''}${doneVisible ? ' done-visible' : ''}`} style={style} title={drag ? undefined : summary}
+        onPointerEnter={(event) => startHover(event, task.id)} onPointerLeave={(event) => { if (event.pointerType === 'mouse') hideDone(task.id) }}
+        onPointerDownCapture={(event) => { if (event.pointerType === 'touch') revealDone(task.id) }}
+        onFocusCapture={() => revealDone(task.id)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) hideDone(task.id) }}>
         <button className="task-bar" style={{ left: x1, width: x2 - x1 }} aria-label={`Edit ${task.title}`}
           onPointerDown={(e) => onPointerDown(e, task)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}
           onClick={() => select(task)}>
-          {!outside && <span className="task-label" style={{ left: Math.max(0, -x1), right: Math.max(0, x2 - width) }}>
+          {!outside && <span className="task-label" style={{ left: Math.max(0, -x1), right: Math.max(clippedRight, done.inside ? done.labelInsetRight : 0) }}>
             <i className={`task-dot${project ? ` project-marker project-${project.color}` : ''}`} />{task.title}
           </span>}
           <span className="task-handle start" data-edge="start" style={{ width: handle }} />
           <span className="task-handle end" data-edge="end" style={{ width: handle }} />
         </button>
-        {outside && <button className="task-label outside" style={{ left: x2 + LABEL_GAP }} onClick={() => select(task)} tabIndex={-1}>
+        {outside && <button className="task-label outside" style={{ left: x2 + LABEL_GAP, maxWidth: done.outsideLabelMaxWidth }} onClick={() => select(task)} tabIndex={-1}>
           <i className={`task-dot${project ? ` project-marker project-${project.color}` : ''}`} />{task.title}
         </button>}
+        <button type="button" className={`task-done ${done.inside ? 'inside' : 'outside'}`} style={{ left: done.left }} aria-label={`Mark ${task.title} done`}
+          title={`Mark ${task.title} done`} disabled={isCompleting || Boolean(drag)}
+          onPointerDown={(event) => event.stopPropagation()} onClick={(event) => finish(event, task)}><span aria-hidden="true">✓</span></button>
         {active?.axis === 'x' && <span className="task-drag-date" style={{ left: clamp(x1, 4, Math.max(4, width - 200)) }}>{formatDayRange(start, end)}</span>}
       </div>
     })}

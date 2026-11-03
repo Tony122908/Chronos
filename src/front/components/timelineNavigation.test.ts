@@ -33,5 +33,29 @@ describe('direct parent-period navigation', () => {
     expect(resolveTimelineUnitNavigation({ row: 'main', start: octoberStart }, 1, focus)?.level).toBe(2)
     expect(resolveTimelineUnitNavigation({ row: 'main', start: utcDate(2026, 9, 26).getTime() }, 2, focus)?.level).toBe(3)
   })
+
+  it('uses the pointer date when entering months instead of January', () => {
+    const november = utcDate(2026, 10, 3).getTime()
+    expect(resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd, anchorMs: november }, 0, focus))
+      .toEqual({ level: 1, anchorMs: november })
+  })
+
+  it('uses the viewport focus when no explicit pointer anchor exists', () => {
+    expect(resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd }, 0, focus))
+      .toEqual({ level: 1, anchorMs: focus })
+  })
+
+  it('clamps pointer anchors at visible period boundaries', () => {
+    expect(resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd, anchorMs: yearStart - 1 }, 0, focus)?.anchorMs).toBe(yearStart)
+    expect(resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd, anchorMs: yearEnd + 1 }, 0, focus)?.anchorMs).toBe(yearEnd - 1)
+  })
+
+  it('retains the same focus across repeated in and out navigation', () => {
+    const november = utcDate(2026, 10, 3).getTime()
+    const intoMonths = resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd, anchorMs: november }, 0, november)
+    const outToYears = resolveTimelineUnitNavigation({ row: 'parent', targetLevel: 0, start: yearStart, end: yearEnd }, 1, intoMonths!.anchorMs)
+    const backToMonths = resolveTimelineUnitNavigation({ row: 'main', start: yearStart, end: yearEnd }, 0, outToYears!.anchorMs)
+    expect(backToMonths?.anchorMs).toBe(november)
+  })
 })
 

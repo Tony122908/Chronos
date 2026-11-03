@@ -3,8 +3,18 @@ import { daysInMonth, utcDate } from './calendar'
 export type Importance = 0 | 1 | 2
 
 // start and end are the UTC midnights of the first and last day; end is inclusive.
-export type Task = { id: string; title: string; start: number; end: number; importance: Importance; urgency: number; notes: string; projectId: string | null }
+export type Task = { id: string; title: string; start: number; end: number; importance: Importance; urgency: number; notes: string; projectId: string | null; completedAt?: number }
 export type NewTask = Omit<Task, 'id'>
+
+export const TASK_COMPLETION_MS = 260
+export const completionDelay = (reducedMotion: boolean) => reducedMotion ? 20 : TASK_COMPLETION_MS
+export const activeTasks = (tasks: readonly Task[]) => tasks.filter((task) => task.completedAt === undefined)
+export const completeTask = (task: Task, completedAt: number): Task => task.completedAt === undefined ? { ...task, completedAt } : task
+export const restoreTask = (task: Task): Task => {
+  if (task.completedAt === undefined) return task
+  const { completedAt: _, ...active } = task
+  return active
+}
 
 export const IMPORTANCE = [
   { name: 'Low', hue: 168, saturation: 48, lightness: 42 },

@@ -312,10 +312,10 @@ button:active { transform: scale(.96); }
 .create-project-button { width: 100%; margin-top: 4px; padding: 8px; color: var(--secondary); text-align: left; font-size: 11px; }
 .task-lanes { position: relative; min-height: 100%; overflow: hidden; background: var(--timeline-field); }
 .task-today { position: absolute; z-index: 2; top: 0; bottom: 0; width: 1px; background: repeating-linear-gradient(to bottom, var(--time-guide) 0 5px, transparent 5px 10px); opacity: .78; pointer-events: none; }
-.task-row { position: absolute; z-index: 1; left: 0; right: 0; height: 30px; pointer-events: none; transition: top .15s ease; }
+.task-row { position: absolute; z-index: 1; left: 0; right: 0; height: 30px; pointer-events: none; transform-origin: center; transition: top .15s ease, opacity 260ms ease, transform 260ms cubic-bezier(.3,0,.2,1); }
 .task-row.active { transition: none; z-index: 3; }
 .task-row > * { pointer-events: auto; }
-.task-bar { position: absolute; top: 0; height: 30px; padding: 0; border-radius: 8px; cursor: grab; touch-action: none; background: color-mix(in srgb, var(--task) 16%, var(--timeline-field)); border: 1px solid color-mix(in srgb, var(--task) 58%, var(--divider)); box-shadow: inset 4px 0 0 color-mix(in srgb, var(--task) 86%, transparent); }
+.task-bar { position: absolute; top: 0; height: 30px; padding: 0; border-radius: 8px; cursor: grab; touch-action: none; transform-origin: center; background: color-mix(in srgb, var(--task) 16%, var(--timeline-field)); border: 1px solid color-mix(in srgb, var(--task) 58%, var(--divider)); box-shadow: inset 4px 0 0 color-mix(in srgb, var(--task) 86%, transparent); transition: background .16s ease, border-color .16s ease, opacity 260ms ease, transform 260ms cubic-bezier(.3,0,.2,1); }
 .task-bar:hover { background: color-mix(in srgb, var(--task) 25%, var(--timeline-field)); border-color: color-mix(in srgb, var(--task) 76%, var(--divider)); }
 .task-bar:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .task-bar:active, .task-label.outside:active { transform: none; }
@@ -333,6 +333,19 @@ button:active { transform: scale(.96); }
 .task-label.outside:hover { background: none; color: var(--text); }
 .task-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--task) 86%, white); }
 .task-dot.project-marker { background: var(--project); box-shadow: 0 0 0 1px color-mix(in srgb, var(--project) 75%, transparent); }
+.task-done { position: absolute; z-index: 4; top: 3px; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border: 1px solid color-mix(in srgb, var(--task) 60%, var(--divider)); border-radius: 7px; opacity: 0; transform: scale(.86); pointer-events: none; background: color-mix(in srgb, var(--timeline-field) 92%, var(--task)); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.12); font-size: 12px; font-weight: 720; transition: opacity 140ms ease, transform 160ms cubic-bezier(.2,.75,.25,1), background 140ms ease; }
+.task-row.done-visible .task-done { opacity: 1; transform: scale(1); pointer-events: auto; }
+.task-done::before { content: ''; position: absolute; inset: -4px -7px; }
+.task-done:hover { background: color-mix(in srgb, var(--task) 24%, var(--timeline-field)); }
+.task-done:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.task-lanes.dragging .task-done { opacity: 0; pointer-events: none; }
+.task-row.completing { opacity: 0; transform: scaleY(.72); pointer-events: none; }
+.task-row.completing .task-bar { opacity: 0; transform: scaleX(0); }
+.task-row.completing .task-label.outside, .task-row.completing .task-done { opacity: 0; transform: scale(.75); }
+
+@media (hover: none) {
+  .task-done { opacity: 1; transform: scale(1); pointer-events: auto; }
+}
 
 @media (max-width: 760px) {
   .app-header { height: auto; min-height: 70px; grid-template-columns: 1fr auto; padding-top: max(12px, env(safe-area-inset-top)); }

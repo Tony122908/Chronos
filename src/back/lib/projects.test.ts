@@ -26,6 +26,12 @@ describe('projects', () => {
     expect(normalizeTasks([legacy])).toEqual([{ ...legacy, projectId: null }])
   })
 
+  it('preserves valid completion timestamps and removes invalid legacy values', () => {
+    const base = { id: 't1', title: 'Task', start: 1, end: 2, importance: 1, urgency: 40, notes: '', projectId: null }
+    expect(normalizeTasks([{ ...base, completedAt: 100 }])[0].completedAt).toBe(100)
+    expect(normalizeTasks([{ ...base, completedAt: 'invalid' }])[0]).not.toHaveProperty('completedAt')
+  })
+
   it('preserves tasks when their project is deleted', () => {
     const result = deleteProject(createProject([], 'Atlas', 'p1', 10), [task('a', 'p1'), task('b')], 'p1')
     expect(result.projects).toEqual([])
